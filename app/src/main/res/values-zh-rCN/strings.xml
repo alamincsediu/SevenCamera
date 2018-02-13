@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Seven相机</string>
+    <string name="btn_desc">按钮</string>
+
+    <string name="request_permission">该应用需要相机和存储空间权限,
+        请去设置连续点击高级设置5次进入高级设置，进入应用设置，打开Seven相机的相机权限和存储空间权限
+    </string>
+    <string name="camera_error">您的设备不支持Camera2</string>
+    <string name="picture_finish_text">相片已经存储到相册 %1$s.</string>
+</resources>
