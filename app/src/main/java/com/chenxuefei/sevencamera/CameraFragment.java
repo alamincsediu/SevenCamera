@@ -48,10 +48,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -237,7 +239,7 @@ public class CameraFragment extends Fragment
         @Override
         public void onImageAvailable(ImageReader reader) {
             mFile = CameraUtils.createMediaPictureFile();
-            mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile));
+            mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile, CameraFragment.this.getActivity()));
         }
 
     };
@@ -451,6 +453,7 @@ public class CameraFragment extends Fragment
     public void onPause() {
         closeCamera();
         stopBackgroundThread();
+        ImageCapture.IMAGE_CAPTURE.clear();
         super.onPause();
     }
 
@@ -838,12 +841,14 @@ public class CameraFragment extends Fragment
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                                @NonNull CaptureRequest request,
                                                @NonNull TotalCaptureResult result) {
-                    String formatString = getResources().getString(R.string.picture_finish_text);
-                    String finialString = String.format(formatString, mFile);
-                    showToast(finialString);
-                    Log.d(TAG, mFile.toString());
-                    unlockFocus();
-                    notifySystemAlbum(mFile);
+                    if(ImageCapture.IMAGE_CAPTURE.isEmpty()) {
+                        String formatString = getResources().getString(R.string.picture_finish_text);
+                        String finialString = String.format(formatString, mFile);
+                        showToast(finialString);
+                        Log.d(TAG, mFile.toString());
+                        unlockFocus();
+                        notifySystemAlbum(mFile);
+                    }
                 }
             };
 
@@ -854,7 +859,6 @@ public class CameraFragment extends Fragment
             e.printStackTrace();
         }
     }
-
 
     private void notifySystemAlbum(File file) {
         Context context = getContext();
@@ -935,9 +939,15 @@ public class CameraFragment extends Fragment
          */
         private final File mFile;
 
-        ImageSaver(Image image, File file) {
+        /**
+         * The Fragment activity
+         */
+        private final Activity mActivity;
+
+        ImageSaver(Image image, File file, Activity activity) {
             mImage = image;
             mFile = file;
+            mActivity = activity;
         }
 
         @Override
@@ -947,8 +957,16 @@ public class CameraFragment extends Fragment
             buffer.get(bytes);
             FileOutputStream output = null;
             try {
-                output = new FileOutputStream(mFile);
-                output.write(bytes);
+                ImageCapture capture = ImageCapture.IMAGE_CAPTURE;
+                if (capture.isEmpty()) {
+                    /*常规操作*/
+                    output = new FileOutputStream(mFile);
+                    output.write(bytes);
+                } else {
+                    /*外部调用操作*/
+                    capture.saveBitmapToFile(mActivity, bytes);
+                }
+
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
